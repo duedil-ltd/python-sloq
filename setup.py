@@ -15,6 +15,6 @@ setup(
     py_modules=["sloq"],
     test_suite="test_sloq",
     license="MIT",
-    keywords=["queue rate limit slow token bucket".split()],
+    keywords="queue rate limit slow token bucket".split(),
     classifiers=[],
 )
