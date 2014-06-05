@@ -1,6 +1,9 @@
 Python Sloq
 ===========
 
+.. image:: https://travis-ci.org/duedil-ltd/python-sloq.svg?branch=master
+    :target: https://travis-ci.org/duedil-ltd/python-sloq
+
 A slower queue implementation, guaranteeing that tasks are processsed at a maximum rate. ``SlowQueue`` aims to be directly comparable with the Queue API so that it can be dropped in as an alternative implementation, as with LIFOQueue and PriorityQueue, but currently (as this needn't be the case) will raise additional ValueErrors if you try to pass ``block=False`` or ``timeout`` > 0 to ``get`` methods. Some slamming is possible and is controllable using the `max_slam` keyword argument on the TokenBucket or SlowQueue instance.
 
 See following example (taken from demo_sloq.py) or the unit tests for more:
