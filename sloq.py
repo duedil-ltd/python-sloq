@@ -17,14 +17,13 @@ class TokenBucket(object):
         The interval in seconds between releasing new tokens
     start:
         Whether to begin ticking now
-    lock:
-        An optional locking mechanism. By default we using threading.Lock.
     """
-    def __init__(self, tick, start=True, lock=None):
+    def __init__(self, tick, start=True, take_lock=None):
         if tick <= 0:
             raise ValueError("TokenBucket tick must be greater than 0")
 
-        self.lock = lock or Lock()
+        self.take_lock = Lock()
+        self.count_lock = Lock()
         self.tick = tick
         self.last_tick = None
         if start:
@@ -44,19 +43,20 @@ class TokenBucket(object):
         """count returns the number of tokens available in the bucket and is
         responsible for accuring further tokens.
         """
-        if not self.last_tick:
-            raise RuntimeError("The TokenBucket has not been started. Call "
-                               "reset() to start manually or pass start=True "
-                               "in the constructor.")
-        # Elapsed time
-        now = self.now()
-        time_delta = now - self.last_tick
-        self.last_tick = now
+        with self.count_lock:
+            if not self.last_tick:
+                raise RuntimeError("The TokenBucket has not been started. "
+                                   "Call reset() to start manually or pass "
+                                   "start=True in the constructor.")
+            # Elapsed time
+            now = self.now()
+            time_delta = now - self.last_tick
+            self.last_tick = now
 
-        # Tokens accrued
-        self._tokens += time_delta / self.tick
+            # Tokens accrued
+            self._tokens += time_delta / self.tick
 
-        return self._tokens
+            return self._tokens
 
     def take(self, n=1, block=False, timeout=None):
         """take removes tokens from the bucket if there is sufficient amount.
@@ -72,7 +72,7 @@ class TokenBucket(object):
             token will be available in the amount of time it takes for a token
             to become available we will fail early.
         """
-        with self.lock:
+        with self.take_lock:
             while True:
                 n, count = float(n), self.count()
                 if n <= count:
