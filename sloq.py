@@ -119,6 +119,9 @@ class SlowQueue(object):
                             "token_bucket TokenBucket instance")
         self.queue = queue or Queue(maxsize=maxsize)
 
+    def reset_tokens(self, tokens=0):
+        self.token_bucket.reset(tokens=tokens)
+
     def get(self, block=True, timeout=0):
         if not block or timeout != 0:
             raise ValueError(
