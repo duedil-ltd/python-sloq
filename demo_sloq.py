@@ -16,45 +16,48 @@ def main(args=None):
                       help="Number of workers")
     prog.add_argument("-d", type=float, default=0, metavar="TASK_DURATION",
                       help="Duration of a single task")
+    prog.add_argument("-s", type=float, default=0, metavar="MAX_SLAM",
+                      help="The maximum amount of slam to allow")
     args = prog.parse_args(args)
 
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     logger.addHandler(logging.StreamHandler())
 
-    test_queue(logger, args.t, args.n, args.d, args.w)
+    test_queue(logger, args.t, args.n, args.d, args.w, args.s)
 
 
-def test_queue(logger, tick=1, tasks=10, task_duration=0, num_workers=3):
+def test_queue(logger, tick=1, tasks=10, task_duration=0, worker_count=3,
+               slam=0):
     start_time = time.time()
+    sloq = SlowQueue(release_tick=tick, max_slam=slam)
 
-    sloq = SlowQueue(release_tick=tick)
+    # Begin the workers
+    for w in xrange(0, worker_count):
+        Thread(target=test_worker, args=(logger, start_time, sloq)).start()
+
+    # Populate the queue
     for task in xrange(0, tasks):
         sloq.put((task, task_duration))
-
-    workers = []
-    for w in xrange(0, num_workers):
-        t = Thread(target=test_queue_worker, args=(logger, start_time, sloq))
-        workers.append(t)
-        t.start()
+    for w in xrange(0, worker_count):
         sloq.put((None, None))
 
     sloq.join()
 
 
-def test_queue_worker(logger, start_time, queue):
+def test_worker(logger, start_time, queue):
     while True:
         task, sleep = queue.get()
         if task is None:
-            logger.info("Thread: %s, Done" % current_thread().ident)
+            logger.info("%s, Done" % current_thread().name)
             queue.task_done()
             return
         else:
-            logger.info("Thread: %s, Elapsed time: %0.2f, Task: %r",
-                        current_thread().ident, time.time() - start_time, task)
+            logger.info("%s, Elapsed time: %0.2f, Task: %r",
+                        current_thread().name, time.time() - start_time, task)
+            if sleep:
+                time.sleep(sleep)
             queue.task_done()
-        if sleep:
-            time.sleep(sleep)
 
 
 if __name__ == "__main__":

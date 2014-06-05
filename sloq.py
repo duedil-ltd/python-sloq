@@ -17,13 +17,18 @@ class TokenBucket(object):
         The interval in seconds between releasing new tokens
     start:
         Whether to begin ticking now
+    max_slam:
+        The maximum number of tokens that can be queued up simultaneously.
+        Having two tokens will allow two tokens to be taken at the same time
+        and two events to happen immediately, regardless of tick.
     """
-    def __init__(self, tick, start=True, take_lock=None):
+    def __init__(self, tick, start=True, max_slam=None):
         if tick <= 0:
             raise ValueError("TokenBucket tick must be greater than 0")
 
         self.take_lock = Lock()
         self.count_lock = Lock()
+        self.max_slam = float(max_slam) if max_slam else float('infinity')
         self.tick = tick
         self.last_tick = None
         if start:
@@ -54,7 +59,10 @@ class TokenBucket(object):
             self.last_tick = now
 
             # Tokens accrued
-            self._tokens += time_delta / self.tick
+            self._tokens = min(
+                self.max_slam,
+                self._tokens + time_delta / self.tick
+            )
 
             return self._tokens
 
@@ -108,12 +116,12 @@ class SlowQueue(object):
         token_bucket is not provided.
     """
     def __init__(self, queue=None, maxsize=0, release_tick=None,
-                 token_bucket=None):
+                 token_bucket=None, max_slam=None):
         if token_bucket:
             self.token_bucket = token_bucket
             self.token_bucket.count()  # Ensure the accural has started
         elif release_tick:
-            self.token_bucket = TokenBucket(release_tick)
+            self.token_bucket = TokenBucket(release_tick, max_slam=max_slam)
         else:
             raise TypeError("SlowQueue requires a release_tick float or "
                             "token_bucket TokenBucket instance")
