@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from setuptools import setup
 
-VERSION = "0.1"
+VERSION = "0.2"
 REPO = "https://github.com/duedil-ltd/python-sloq"
 README = "README.rst"
 
